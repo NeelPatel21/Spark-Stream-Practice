@@ -4,6 +4,11 @@ from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 
+import kafka_stream.util as util
+
+# Constants
+ZOOKEEPER = '192.168.138.130:2181'
+CONS_GROUP = 'spark-streaming2'  # consumer group
 
 if __name__ == '__main__':
     # ssc = StreamingContext.getOrCreate('tmp/checkpoint_v01')
@@ -11,12 +16,16 @@ if __name__ == '__main__':
     sc = SparkContext()
     sc.setLogLevel("WARN")
     ssc = StreamingContext(sc, 30)
+    ssc.checkpoint('temp/checkpoint')
 
     # Define Kafka Consumer
-    ks = KafkaUtils.createStream(ssc, '192.168.138.130:2181', 'spark-streaming2', {'test':2})
+    ks = KafkaUtils.createStream(ssc, '192.168.138.130:2181', CONS_GROUP, {'test': 1})
 
-    ks.count().map(lambda x: 'counts'+str(x)).pprint(5)
-    # ks.pprint(5)
+    # ks.count().map(lambda x: 'counts'+str(x)).pprint(5)
+    ksf = ks.map(lambda x: util.logParser(x[1]))
+
+    util.requestTypeCounter(ksf).pprint(5)
+    util.responseTypeCounter(ksf).pprint(5)
 
     ssc.start()
     ssc.awaitTermination()
